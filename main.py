@@ -1,5 +1,6 @@
-from apikeys import NutrixAppID, NutrixKey, SheetyToken
+from apikeys import NutrixAppID, NutrixKey, SheetyToken, Google_Sheet_Endpoint
 import requests
+from datetime import datetime
 
 # Personal data for query
 GENDER = "male"
@@ -9,7 +10,8 @@ AGE = 38
 
 # endpoint for api call to Nutrinionix and Sheety
 exercise_endpoint = "https://trackapi.nutritionix.com/v2/natural/exercise"
-sheety_endpoint = "https://api.sheety.co/afb11dba9362fa1a06c43e30af90187c/myWorkouts/workouts"
+sheety_endpoint = Google_Sheet_Endpoint
+GOOGLE_SHEET_NAME = "sheet1"
 
 # get text from user
 TEXT = input("What exercise did you just complete? ")
@@ -22,7 +24,7 @@ headers_nutrix = {
 }
 
 # Parameters
-parameters = {
+nutritionix_parameters = {
     "query": TEXT,
     "gender": GENDER,
     "weight_kg": WEIGHT_KG,
@@ -31,17 +33,28 @@ parameters = {
 }
 
 # Nutritionix api call
-response = requests.post(exercise_endpoint, json=parameters, headers=headers_nutrix)
+response = requests.post(exercise_endpoint, json=nutritionix_parameters, headers=headers_nutrix)
 data = response.json()
-print(data["exercises"][0])
 
-print(data["exercises"][0]['duration_min'])
-print(f"the type of exercise: {data['exercises'][0]['name']} number of calories burned {data['exercises'][0]['nf_calories']}, and the time spend {data['exercises'][0]['name']}: {data['exercises'][0]['duration_min']}")
-
-
+# import the date and time
+today_date = datetime.now().strftime("%m/%d/%Y")
+current_time = datetime.now().strftime("%X")
 
 headers_sheety = {
-    "Authorization": SheetyToken
+    "Authorization": f"Bearer {SheetyToken}"
 }
 
-# response = requests.post(sheety_endpoint, json=parameters, headers=headers_sheety)
+for exercise in data["exercises"]:
+    print(exercise['duration_min'])
+    sheety_parameters = {
+        GOOGLE_SHEET_NAME: {
+            "date": today_date,
+            "time": current_time,
+            "exercise": exercise["name"],
+            "duration": exercise["duration_min"],
+            "calories": exercise["nf_calories"]
+        }
+
+    }
+    response = requests.post(sheety_endpoint, json=sheety_parameters, headers=headers_sheety)
+    print(response.text)
